@@ -6,7 +6,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 class UCT:
-    def __init__(self, simulator, max_iterations=1000, exploration_weight=1.4, epsilon=0.9):
+    def __init__(self, simulator, max_iterations=1000, exploration_weight=1.4, epsilon=0.5):
         self.simulator = simulator
         self.max_iterations = max_iterations
         self.exploration_weight = exploration_weight
@@ -55,7 +55,7 @@ class UCT:
         done = False
         total_reward = 0
         depth = 0
-        max_depth = 100
+        max_depth = 20
         while not done and depth < max_depth:
             action = np.random.randint(self.simulator.get_action_space())
             next_state, reward, done = self.simulator.take_action(current_state, action)
@@ -68,12 +68,11 @@ class UCT:
     def backpropagate(self, node, reward):
         while node:
             node.visits += 1
-            node.value += reward
+            node.value += (reward - node.value) / node.visits
             node = node.parent
-        logging.debug(f"Backpropagated reward {reward}")
 
     def best_action(self, node):
         if not node.children:
             logging.error("Attempting to select best action from node with no children")
             return np.random.randint(self.simulator.get_action_space())
-        return max(node.children, key=lambda c: c.visits).action
+        return max(node.children, key=lambda c: c.value / (c.visits + 1e-5)).action
